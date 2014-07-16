@@ -76,3 +76,6 @@ move %1 working_dir\original\
 ```
 
 The script will then run automatically whenever a new file is added to the working directory folder.
+
+Troubleshooting:
+* You may need to use the full path to your ruby install, e.g.: C:\Ruby193\bin\ruby.exe
