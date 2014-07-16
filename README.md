@@ -65,10 +65,10 @@ Use in conjunction with Folder Actions for Windows (http://www.folderactions.com
 * Working directory must contain two folders: "converted" and "original"
 * Replace the directory path in line 3 of splitspfWIN.rb with your correct working directory
 * In Folder Actions, choose the following:
-** Click the + button and navigate to your working dir
-** Choose User defined action
-** Choose Execute the following (.BAT) script
-** In the box, input the following, replacing "path_to_script" with the path to the directory that the script lives, and replacing "working_dir" with the path of your working dir:
+    * Click the + button and navigate to your working dir
+    * Choose "User defined action"
+    * Choose "Execute the following (.BAT) script" (second option)
+    * In the box, input the following, replacing "path_to_script" with the path to the directory that the script lives, and replacing "working_dir" with the path of your working dir:
 
 ```
 ruby path_to_script\splitspfWIN.rb %1
