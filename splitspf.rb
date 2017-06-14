@@ -51,12 +51,35 @@ def splitSPF(file, outputdir)
 		end
 		# rename the files based on the statement data
 		rename = File.binread(tempfile)
-		payee = /(PAYEE:\s+)(\d+)/.match(rename)[2]
-		author = /(AUTHOR:\s+)(\d+)/.match(rename)[2]
+
+		payee = /(PAYEE:\s+)(\d+)/.match(rename)
+		unless payee.nil or payee.empty
+			payee = payee[2]
+		else
+			payee = "NOPAYEEFOUND"
+		end
+
+		author = /(AUTHOR:\s+)(\d+)/.match(rename)
+		unless author.nil or author.empty
+			author = author[2]
+		else
+			author = "NOAUTHORFOUND"
+		end
+
 		isbn = /978\d{10}/.match(rename)
-		st1date = /(ROYALTY STATEMENT FOR PERIOD ENDING )(\d*\/\d*)/.match(rename)[2]
-		st2date = st1date.split("/")
-		sdate = st2date.join("-")
+		if isbn.nil or isbn.empty
+			isbn = "NOISBNFOUND"
+		end
+
+		st1date = /(ROYALTY STATEMENT FOR PERIOD ENDING )(\d*\/\d*)/.match(rename)
+		unless st1date.nil or st1date.empty
+			st1date = st1date[2]
+			st2date = st1date.split("/")
+			sdate = st2date.join("-")
+		else
+			st1date = "NODATEFOUND"
+		end
+		
 		finalfilename = File.join(outputdir, "#{author}_#{payee}_#{isbn}_#{sdate}.spf")
 		FileUtils.mv(tempfile, finalfilename)
 	end
