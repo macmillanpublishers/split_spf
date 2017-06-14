@@ -30,10 +30,10 @@ def nameLogFile(dir)
 end
 
 def write_json(json, file)
-  unless ARGV.empty?
-    finaljson = JSON.pretty_generate(json)
-    File.open(file, 'w+:UTF-8') { |f| f.puts finaljson }
-  end
+	puts json
+	puts file
+  finaljson = JSON.pretty_generate(json)
+  File.open(file, 'w+:UTF-8') { |f| f.puts finaljson }
 end
 
 # ---------------------- METHODS
@@ -207,5 +207,4 @@ convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile, 'convert_
 # ---------------------- LOGGING
 
 # Write json log:
-puts @log_hash
 write_json(@log_hash, logfile)
