@@ -166,4 +166,4 @@ splitSPF(input_file, spfdir)
 
 spfarr = getSPFArray(spfdir)
 
-convertSPF(spfarr, swiftconvcmd, watermark, finaldir, logfile)
+convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile)
