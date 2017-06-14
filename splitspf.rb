@@ -7,29 +7,9 @@ require 'json'
 thisscript = File.basename($0)
 
 #hash from json log
-def jsonlog_hash(logfile)
+def jsonlog_hash()
 	json_hash = {}
-	if File.file?(logfile)
-		file = File.open(logfile, "r:utf-8")
-		content = file.read
-		file.close
-		json_hash = JSON.parse(content)
-	end
-	json_hash
-end
-
-# for any script that calls this method:
-# create 'local_log' hash nested in the jsonlog_hash named after the script basename
-# add a 'begun' key/value to the new local hash
-def setLocalLoghash(logfile, new_hash=false)
-	# if we receive optional new_hash value of 'true', we overwrite jsonlog contents & starting with a fresh new hash
-	unless new_hash == true
-  	local_log_hash = jsonlog_hash(logfile)
-	else
-		local_log_hash = {}
-	end
-  local_log_hash[thisscript] = {'begun'=>Time.now}
-  return local_log_hash, local_log_hash[thisscript]
+	return json_hash
 end
 
 def logtoJson(log_hash, logkey, logstring)
@@ -57,9 +37,10 @@ def nameLogFile(dir)
 	end
 end
 
-def writeLogOutput(logfile, logdata)
-	File.open(logfile, 'a+') do |output|
-    output.write logdata
+def write_json(hash, file)
+  unless ARGV.empty?
+    finaljson = JSON.pretty_generate(hash)
+    File.open(file, 'w+:UTF-8') { |f| f.puts finaljson }
   end
 end
 
@@ -217,7 +198,7 @@ archivedir = File.join(royaltiesdir, "archive", stage)
 
 logfile = nameLogFile(royaltiesdir)
 
-local_log_hash, @log_hash = setLocalLoghash(logfile)
+@log_hash = {}
 
 # remove old files from temp dir
 clearDir(spfdir, archivedir, 'archiving_previous_tempfiles')
@@ -234,5 +215,4 @@ convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile, 'convert_
 # ---------------------- LOGGING
 
 # Write json log:
-logtoJson(log_hash, 'completed', Time.now)
-write_json(local_log_hash, logfile)
+write_json(@log_hash, logfile)
