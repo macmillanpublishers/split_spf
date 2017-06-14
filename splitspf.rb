@@ -215,4 +215,5 @@ convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile, 'convert_
 # ---------------------- LOGGING
 
 # Write json log:
-write_json(@log_hash, logfile)
+puts log_hash
+write_json(log_hash, logfile)
