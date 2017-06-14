@@ -4,14 +4,6 @@ require 'json'
 
 # ---------------------- LOGGING SETUP
 
-thisscript = File.basename($0)
-
-#hash from json log
-def jsonlog_hash()
-	json_hash = {}
-	return json_hash
-end
-
 def logtoJson(log_hash, logkey, logstring)
   #if the logkey is empty we skip writing to the log
   unless logkey.empty?
@@ -215,5 +207,5 @@ convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile, 'convert_
 # ---------------------- LOGGING
 
 # Write json log:
-puts log_hash
-write_json(log_hash, logfile)
+puts @log_hash
+write_json(@log_hash, logfile)
