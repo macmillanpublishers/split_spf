@@ -187,7 +187,7 @@ end
 
 # ---------------------- VARIABLES
 
-local_log_hash, @log_hash = Bkmkr::Paths.setLocalLoghash
+local_log_hash, @log_hash = setLocalLoghash
 
 input_file = ARGV[0]
 
