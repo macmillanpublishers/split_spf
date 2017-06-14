@@ -121,6 +121,8 @@ finaldir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR]
 
 finaldir = File.join(finaldir, "done")
 
+archivedir = File.join(royaltiesdir, "archive", stage)
+
 # ---------------------- PROCESSES
 
 logfile = nameLogFile(royaltiesdir)
