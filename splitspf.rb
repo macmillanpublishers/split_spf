@@ -31,7 +31,6 @@ def setLocalLoghash(new_hash=false)
   local_log_hash[thisscript] = {'begun'=>Time.now}
   return local_log_hash, local_log_hash[thisscript]
 end
-end
 
 def logtoJson(log_hash, logkey, logstring)
   #if the logkey is empty we skip writing to the log
