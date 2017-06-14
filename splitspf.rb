@@ -90,22 +90,24 @@ def getSPFArray(dir)
 end
 
 def runSwiftConvert(command, inputfile, outputfile)
-	logoutput = `"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command F
+	logdata = `"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command F
 	ILE alias ""pdfFactory Pro"" | set filename #{outputfile} | plot 1 all"`
+	logOutput(logfile, logdata)
 rescue
-	logoutput = "ERROR running SwiftConvert on file #{inputfile}"
+	logdata = "ERROR running SwiftConvert on file #{inputfile}"
 ensure
-	return logoutput
-	logOutput(logfile, logoutput)
+	return logdata
+	logOutput(logfile, logdata)
 end
 
 def applyWatermark(file, watermark)
-	logoutput = `pdftk #{file} multistamp #{watermark} output #{finalfilename} verbose`
+	logdata = `pdftk #{file} multistamp #{watermark} output #{finalfilename} verbose`
+	logOutput(logfile, logdata)
 rescue
-	logoutput = "ERROR applying watermark to file #{inputfile}"
+	logdata = "ERROR applying watermark to file #{inputfile}"
 ensure
-	return logoutput
-	logOutput(logfile, logoutput)
+	return logdata
+	logOutput(logfile, logdata)
 end
 
 def logOutput(logfile, logdata)
