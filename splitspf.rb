@@ -139,8 +139,9 @@ royaltiesdir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARA
 spfdir = File.join(royaltiesdir, "temp", stage)
 
 swiftconvcmd = "C:\Program Files (x86)\SwiftView\sview.exe"
+puts swiftconvcmd
 
-pdfdir = File.join("Users", "padwoadmin", "Documents", "PDF files", "Autosave")
+pdfdir = File.join("C:", "Users", "padwoadmin", "Documents", "PDF files", "Autosave")
 
 assetsdir = File.join(royaltiesdir, "assets")
 
