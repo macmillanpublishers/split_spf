@@ -96,6 +96,7 @@ rescue
 	logoutput = "ERROR running SwiftConvert on file #{inputfile}"
 ensure
 	return logoutput
+	logOutput(logfile, logoutput)
 end
 
 def applyWatermark(file, watermark)
@@ -104,6 +105,7 @@ rescue
 	logoutput = "ERROR applying watermark to file #{inputfile}"
 ensure
 	return logoutput
+	logOutput(logfile, logoutput)
 end
 
 def logOutput(logfile, logdata)
@@ -114,13 +116,13 @@ end
 
 def convertSPF(arr, cmd, pdfdir, watermark, finaldir, logfile)
 	arr.each do |c|
+		logOutput(logfile, c)
 		outputfilename = c.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first
 		outputfilename = "#{outputfilename}.pdf"
 		swiftconvert = runSwiftConvert(cmd, c, outputfilename)
 		fullpdfpath = File.join(pdfdir, outputfilename)
 		watermarks = applyWatermark(fullpdfpath, watermark)
 	  FileUtils.mv(fullpdfpath, finaldir)
-		logOutput(logfile, "#{swiftconvert}, #{watermarks}")
 	end
 end
 
