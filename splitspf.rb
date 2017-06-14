@@ -1,27 +1,80 @@
 require 'fileutils'
 require 'date'
+require 'json'
 
-# ---------------------- METHODS
+# ---------------------- LOGGING SETUP
 
-def clearDir(dir, archivedir)
-	FileUtils.cp Dir["#{dir}/*"].select {|f| test ?f, f}, archivedir
+thisscript = File.basename($0)
+
+#hash from json log
+def jsonlog_hash(logfile)
+	json_hash = {}
+	if File.file?(json_log)
+		file = File.open(json_log, "r:utf-8")
+		content = file.read
+		file.close
+		json_hash = JSON.parse(content)
+	end
+	json_hash
+end
+
+# for any script that calls this method:
+# create 'local_log' hash nested in the jsonlog_hash named after the script basename
+# add a 'begun' key/value to the new local hash
+def setLocalLoghash(new_hash=false)
+	# if we receive optional new_hash value of 'true', we overwrite jsonlog contents & starting with a fresh new hash
+	unless new_hash == true
+  	local_log_hash = jsonlog_hash
+	else
+		local_log_hash = {}
+	end
+  local_log_hash[thisscript] = {'begun'=>Time.now}
+  return local_log_hash, local_log_hash[thisscript]
+end
+end
+
+def logtoJson(log_hash, logkey, logstring)
+  #if the logkey is empty we skip writing to the log
+  unless logkey.empty?
+    #if the logstring is nil or undefined, set logstring to true
+    if !defined?(logstring) || logstring.nil?
+      logstring = true
+    end
+    log_hash[logkey] = logstring
+  end
+rescue => e
+  log_hash[logkey] = "LOGGING_ERROR: #{e}"
 end
 
 def nameLogFile(dir)
 	todaysdate = Date.today
 	logdir = File.join(dir, "logs")
-	filename = File.join(logdir, "#{todaysdate}_1.txt")
+	filename = File.join(logdir, "#{todaysdate}_1.json")
 	if File.exist?(filename)
-		newestfile = Dir.glob("#{logdir}/*.txt").max_by {|f| File.mtime(f)}
+		newestfile = Dir.glob("#{logdir}/*.json").max_by {|f| File.mtime(f)}
 		counter = newestfile.split('.').first.split('_').last
-		puts counter
 		counter = counter.to_i + 1
-		puts counter
-		filename = File.join(dir, "logs", "#{todaysdate}_#{counter}.txt")
+		filename = File.join(dir, "logs", "#{todaysdate}_#{counter}.json")
 	end
 end
 
-def splitSPF(file, outputdir)
+def writeLogOutput(logfile, logdata)
+	File.open(logfile, 'a+') do |output|
+    output.write logdata
+  end
+end
+
+# ---------------------- METHODS
+
+def clearDir(dir, archivedir, logkey='')
+	FileUtils.cp Dir["#{dir}/*"].select {|f| test ?f, f}, archivedir
+rescue => logstring
+ensure
+  logtoJson(@log_hash, logkey, logstring)
+end
+
+def splitSPF(file, outputdir, logkey='')
+	logstring = file
 	s = File.binread(file)
 	bits = s.unpack("B*")[0]
 	counting = bits.scan(/010100000110000101100111011001010010000000110001/)
@@ -81,42 +134,43 @@ def splitSPF(file, outputdir)
 		finalfilename = File.join(outputdir, "#{author}_#{payee}_#{isbn}_#{sdate}.spf")
 		FileUtils.mv(tempfile, finalfilename)
 	end
+rescue => logstring
+ensure
+  logtoJson(@log_hash, logkey, logstring)
 end
 
-def getSPFArray(dir)
+def getSPFArray(dir, logkey='')
 	Dir.glob("#{dir}/*.spf")
+rescue => logstring
+ensure
+  logtoJson(@log_hash, logkey, logstring)
 end
 
-def runSwiftConvert(command, inputfile, outputfile)
-	logdata = `"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command F
+def runSwiftConvert(command, inputfile, outputfile, logkey='')
+	logstring = `"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command F
 	ILE alias ""pdfFactory Pro"" | set filename #{outputfile} | plot 1 all"`
-	logOutput(logfile, logdata)
-rescue
-	logdata = "ERROR running SwiftConvert on file #{inputfile}"
+rescue => logstring
 ensure
-	return logdata
-	logOutput(logfile, logdata)
+  logtoJson(@log_hash, logkey, logstring)
 end
 
-def applyWatermark(file, watermark)
-	logdata = `pdftk #{file} multistamp #{watermark} output #{finalfilename} verbose`
-	logOutput(logfile, logdata)
-rescue
-	logdata = "ERROR applying watermark to file #{inputfile}"
+def applyWatermark(file, watermark, logkey='')
+	logstring = `pdftk #{file} multistamp #{watermark} output #{finalfilename} verbose`
+rescue => logstring
 ensure
-	return logdata
-	logOutput(logfile, logdata)
+  logtoJson(@log_hash, logkey, logstring)
 end
 
-def logOutput(logfile, logdata)
-	File.open(logfile, 'a+') do |output|
-    output.write logdata
-  end
+def moveFile(file, dest, logkey='')
+	FileUtils.mv(file, dest)
+rescue => logstring
+ensure
+  logtoJson(@log_hash, logkey, logstring)
 end
 
-def convertSPF(arr, cmd, pdfdir, watermark, finaldir, logfile)
+def convertSPF(arr, cmd, pdfdir, watermark, finaldir, logfile, logkey='')
+	logstring = arr.count
 	arr.each do |c|
-		logOutput(logfile, c)
 		outputfilename = c.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first
 		outputfilename = "#{outputfilename}.pdf"
 		swiftconvert = runSwiftConvert(cmd, c, outputfilename)
@@ -124,9 +178,14 @@ def convertSPF(arr, cmd, pdfdir, watermark, finaldir, logfile)
 		watermarks = applyWatermark(fullpdfpath, watermark)
 	  FileUtils.mv(fullpdfpath, finaldir)
 	end
+rescue => logstring
+ensure
+  logtoJson(@log_hash, logkey, logstring)
 end
 
 # ---------------------- VARIABLES
+
+local_log_hash, @log_hash = Bkmkr::Paths.setLocalLoghash
 
 input_file = ARGV[0]
 
@@ -169,3 +228,9 @@ splitSPF(input_file, spfdir)
 spfarr = getSPFArray(spfdir)
 
 convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile)
+
+# ---------------------- LOGGING
+
+# Write json log:
+logtoJson(log_hash, 'completed', Time.now)
+write_json(local_log_hash, logfile)
