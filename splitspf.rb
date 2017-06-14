@@ -187,10 +187,6 @@ end
 
 # ---------------------- VARIABLES
 
-logfile = nameLogFile(royaltiesdir)
-
-local_log_hash, @log_hash = setLocalLoghash(logfile)
-
 input_file = ARGV[0]
 
 stage = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-2].pop
@@ -218,6 +214,10 @@ finaldir = File.join(finaldir, "done")
 archivedir = File.join(royaltiesdir, "archive", stage)
 
 # ---------------------- PROCESSES
+
+logfile = nameLogFile(royaltiesdir)
+
+local_log_hash, @log_hash = setLocalLoghash(logfile)
 
 # remove old files from temp dir
 clearDir(spfdir, archivedir, 'archiving_previous_tempfiles')
