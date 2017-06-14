@@ -1,4 +1,27 @@
+require 'fileutils'
+require 'date'
+
 # ---------------------- METHODS
+
+def clearDir(dir, archivedir)
+	FileUtils.cp Dir["#{dir}/*"].select {|f| test ?f, f}, archivedir
+end
+
+def nameLogFile(dir)
+	todaysdate = Date.today
+	logdir = File.join(dir, "logs")
+	filename = File.join(logdir, "#{todaysdate}_1.txt")
+	if File.file? filename 
+		newestfile = Dir.glob("#{logdir}/*.txt").max_by {|f| File.mtime(f)}
+		counter = newestfile.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first.split('_').last
+		counter = counter + 1
+		filename = File.join(dir, "logs", "#{todaysdate}_#{counter}.txt")
+	end
+rescue
+	filename = "log.txt"
+ensure
+	return filename
+end
 
 def splitSPF(file, outputdir)
 	s = File.binread(file)
@@ -100,8 +123,16 @@ finaldir = File.join(finaldir, "done")
 
 # ---------------------- PROCESSES
 
+logfile = nameLogFile(royaltiesdir)
+
+# remove old files from temp dir
+clearDir(spfdir, archivedir)
+
+# remove old files from final dir
+clearDir(finaldir, archivedir)
+
 splitSPF(input_file)
 
 spfarr = getSPFArray(spfdir)
 
-convertSPF(spfarr, watermark)
+convertSPF(spfarr, watermark, finaldir, logfile)
