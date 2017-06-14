@@ -31,7 +31,6 @@ def nameLogFile(dir)
 end
 
 def write_json(json, file)
-	puts file
   finaljson = JSON.pretty_generate(json)
   File.open(file, 'w+:UTF-8') { |f| f.puts finaljson }
 end
@@ -189,7 +188,6 @@ archivedir = File.join(royaltiesdir, "archive", stage)
 # ---------------------- PROCESSES
 
 logfile = nameLogFile(royaltiesdir)
-puts logfile
 
 @log_hash = {}
 
@@ -207,5 +205,5 @@ convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile, 'convert_
 
 # ---------------------- LOGGING
 
-# Write json log:
+# Write json log
 write_json(@log_hash, logfile)
