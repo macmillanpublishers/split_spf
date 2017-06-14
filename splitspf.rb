@@ -15,12 +15,9 @@ def nameLogFile(dir)
 		newestfile = Dir.glob("#{logdir}/*.txt").max_by {|f| File.mtime(f)}
 		counter = newestfile.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first.split('_').last
 		counter = counter + 1
+		puts counter
 		filename = File.join(dir, "logs", "#{todaysdate}_#{counter}.txt")
 	end
-rescue
-	filename = File.join(logdir, "log.txt")
-ensure
-	return filename
 end
 
 def splitSPF(file, outputdir)
