@@ -23,7 +23,7 @@ ensure
 	return filename
 end
 
-def splitSPF(file, outputdir)
+def splitSPF(file, tempdir, outputdir)
 	s = File.binread(file)
 	bits = s.unpack("B*")[0]
 	counting = bits.scan(/010100000110000101100111011001010010000000110001/)
@@ -103,7 +103,7 @@ end
 
 input_file = ARGV[0]
 
-stage = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-2]
+stage = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-2].pop
 
 royaltiesdir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-3].join(File::SEPARATOR)
 
@@ -111,7 +111,7 @@ spfdir = File.join(royaltiesdir, "temp", stage)
 
 assetsdir = File.join(royaltiesdir, "assets")
 
-if stage == "final"
+if stage == "Final"
 	watermark = File.join(assetsdir, "images", "watermark-final.pdf")
 else
 	watermark = File.join(assetsdir, "images", "watermark-draft.pdf")
