@@ -30,7 +30,6 @@ def nameLogFile(dir)
 end
 
 def write_json(json, file)
-	puts json
 	puts file
   finaljson = JSON.pretty_generate(json)
   File.open(file, 'w+:UTF-8') { |f| f.puts finaljson }
@@ -189,6 +188,7 @@ archivedir = File.join(royaltiesdir, "archive", stage)
 # ---------------------- PROCESSES
 
 logfile = nameLogFile(royaltiesdir)
+puts logfile
 
 @log_hash = {}
 
