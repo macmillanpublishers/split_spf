@@ -37,9 +37,9 @@ def nameLogFile(dir)
 	end
 end
 
-def write_json(hash, file)
+def write_json(json, file)
   unless ARGV.empty?
-    finaljson = JSON.pretty_generate(hash)
+    finaljson = JSON.pretty_generate(json)
     File.open(file, 'w+:UTF-8') { |f| f.puts finaljson }
   end
 end
