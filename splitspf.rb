@@ -19,13 +19,19 @@ end
 
 def nameLogFile(dir)
 	todaysdate = Date.today
+	puts "1: #{todaysdate}"
 	logdir = File.join(dir, "logs")
+	puts "2: #{logdir}"
 	filename = File.join(logdir, "#{todaysdate}_1.json")
+	puts "3: #{filename}"
 	if File.exist?(filename)
 		newestfile = Dir.glob("#{logdir}/*.json").max_by {|f| File.mtime(f)}
+		puts "4: #{newestfile}"
 		counter = newestfile.split('.').first.split('_').last
 		counter = counter.to_i + 1
+		puts "5: #{counter}"
 		filename = File.join(dir, "logs", "#{todaysdate}_#{counter}.json")
+		puts "6: #{filename}"
 	end
 end
 
