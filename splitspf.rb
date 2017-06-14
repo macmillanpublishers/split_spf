@@ -13,7 +13,8 @@ def nameLogFile(dir)
 	filename = File.join(logdir, "#{todaysdate}_1.txt")
 	if File.exist?(filename)
 		newestfile = Dir.glob("#{logdir}/*.txt").max_by {|f| File.mtime(f)}
-		counter = newestfile.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first.split('_').last
+		counter = newestfile.split('.').first.split('_').last
+		puts counter
 		counter = counter.to_i + 1
 		puts counter
 		filename = File.join(dir, "logs", "#{todaysdate}_#{counter}.txt")
