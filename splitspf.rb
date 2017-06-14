@@ -112,12 +112,14 @@ def logOutput(logfile, logdata)
   end
 end
 
-def convertSPF(arr, watermark, finaldir, logfile)
+def convertSPF(arr, cmd, pdfdir, watermark, finaldir, logfile)
 	arr.each do |c|
-		outputfilename = c
-		swiftconvert = runSwiftConvert(swiftconvcmd, c, outputfilename)
-		watermarks = applyWatermark(outputfilename, watermark)
-		FileUtils.cp(outputfilename, finaldir)
+		outputfilename = c.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first
+		outputfilename = "#{outputfilename}.pdf"
+		swiftconvert = runSwiftConvert(cmd, c, outputfilename)
+		fullpdfpath = File.join(pdfdir, outputfilename)
+		watermarks = applyWatermark(fullpdfpath, watermark)
+	  FileUtils.mv(fullpdfpath, finaldir)
 		logOutput(logfile, "#{swiftconvert}, #{watermarks}")
 	end
 end
@@ -131,6 +133,10 @@ stage = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].co
 royaltiesdir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-3].join(File::SEPARATOR)
 
 spfdir = File.join(royaltiesdir, "temp", stage)
+
+swiftconvcmd = "C:\Program Files (x86)\SwiftView\sview.exe"
+
+pdfdir = File.join("Users", "padwoadmin", "Documents", "PDF files", "Autosave")
 
 assetsdir = File.join(royaltiesdir, "assets")
 
@@ -160,4 +166,4 @@ splitSPF(input_file, spfdir)
 
 spfarr = getSPFArray(spfdir)
 
-convertSPF(spfarr, watermark, finaldir, logfile)
+convertSPF(spfarr, swiftconvcmd, watermark, finaldir, logfile)
