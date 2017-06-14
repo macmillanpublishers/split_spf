@@ -133,7 +133,7 @@ clearDir(spfdir, archivedir)
 # remove old files from final dir
 clearDir(finaldir, archivedir)
 
-splitSPF(input_file)
+splitSPF(input_file, spfdir)
 
 spfarr = getSPFArray(spfdir)
 
