@@ -9,8 +9,8 @@ thisscript = File.basename($0)
 #hash from json log
 def jsonlog_hash(logfile)
 	json_hash = {}
-	if File.file?(json_log)
-		file = File.open(json_log, "r:utf-8")
+	if File.file?(logfile)
+		file = File.open(logfile, "r:utf-8")
 		content = file.read
 		file.close
 		json_hash = JSON.parse(content)
@@ -21,10 +21,10 @@ end
 # for any script that calls this method:
 # create 'local_log' hash nested in the jsonlog_hash named after the script basename
 # add a 'begun' key/value to the new local hash
-def setLocalLoghash(new_hash=false)
+def setLocalLoghash(logfile, new_hash=false)
 	# if we receive optional new_hash value of 'true', we overwrite jsonlog contents & starting with a fresh new hash
 	unless new_hash == true
-  	local_log_hash = jsonlog_hash
+  	local_log_hash = jsonlog_hash(logfile)
 	else
 		local_log_hash = {}
 	end
@@ -187,7 +187,9 @@ end
 
 # ---------------------- VARIABLES
 
-local_log_hash, @log_hash = setLocalLoghash
+logfile = nameLogFile(royaltiesdir)
+
+local_log_hash, @log_hash = setLocalLoghash(logfile)
 
 input_file = ARGV[0]
 
@@ -216,8 +218,6 @@ finaldir = File.join(finaldir, "done")
 archivedir = File.join(royaltiesdir, "archive", stage)
 
 # ---------------------- PROCESSES
-
-logfile = nameLogFile(royaltiesdir)
 
 # remove old files from temp dir
 clearDir(spfdir, archivedir, 'archiving_previous_tempfiles')
