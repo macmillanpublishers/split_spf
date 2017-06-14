@@ -23,7 +23,7 @@ ensure
 	return filename
 end
 
-def splitSPF(file, tempdir, outputdir)
+def splitSPF(file, outputdir)
 	s = File.binread(file)
 	bits = s.unpack("B*")[0]
 	counting = bits.scan(/010100000110000101100111011001010010000000110001/)
