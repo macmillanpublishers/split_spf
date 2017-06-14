@@ -18,7 +18,7 @@ def nameLogFile(dir)
 		filename = File.join(dir, "logs", "#{todaysdate}_#{counter}.txt")
 	end
 rescue
-	filename = "log.txt"
+	filename = File.join(logdir, "log.txt")
 ensure
 	return filename
 end
@@ -139,7 +139,6 @@ royaltiesdir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARA
 spfdir = File.join(royaltiesdir, "temp", stage)
 
 swiftconvcmd = File.join("C:", "Program Files (x86)", "SwiftView", "sview.exe")
-puts swiftconvcmd
 
 pdfdir = File.join("C:", "Users", "padwoadmin", "Documents", "PDF files", "Autosave")
 
