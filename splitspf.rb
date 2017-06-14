@@ -33,6 +33,7 @@ def nameLogFile(dir)
 		filename = File.join(dir, "logs", "#{todaysdate}_#{counter}.json")
 		puts "6: #{filename}"
 	end
+	return filename
 end
 
 def write_json(json, file)
