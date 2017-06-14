@@ -140,14 +140,17 @@ ensure
 end
 
 def getSPFArray(dir, logkey='')
-	Dir.glob("#{dir}/*.spf")
+	arr = Dir.glob("#{dir}/*.spf")
+	logstring = arr.count
+	return arr
 rescue => logstring
 ensure
   logtoJson(@log_hash, logkey, logstring)
 end
 
 def runSwiftConvert(command, inputfile, outputfile, logkey='')
-	logstring = `"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command F
+	logstring = inputfile
+	`"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command F
 	ILE alias ""pdfFactory Pro"" | set filename #{outputfile} | plot 1 all"`
 rescue => logstring
 ensure
@@ -155,7 +158,8 @@ ensure
 end
 
 def applyWatermark(file, watermark, logkey='')
-	logstring = `pdftk #{file} multistamp #{watermark} output #{finalfilename} verbose`
+	logstring = file
+	`pdftk #{file} multistamp #{watermark} output #{finalfilename} verbose`
 rescue => logstring
 ensure
   logtoJson(@log_hash, logkey, logstring)
@@ -169,14 +173,13 @@ ensure
 end
 
 def convertSPF(arr, cmd, pdfdir, watermark, finaldir, logfile, logkey='')
-	logstring = arr.count
 	arr.each do |c|
 		outputfilename = c.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first
 		outputfilename = "#{outputfilename}.pdf"
-		swiftconvert = runSwiftConvert(cmd, c, outputfilename)
-		fullpdfpath = File.join(pdfdir, outputfilename)
-		watermarks = applyWatermark(fullpdfpath, watermark)
-	  FileUtils.mv(fullpdfpath, finaldir)
+		swiftconvert = runSwiftConvert(cmd, c, outputfilename, 'converting_file_to_spf')
+		fullpdfpath = File.join(pdfdir, outputfilename, 'converting_file_to_pdf')
+		watermarks = applyWatermark(fullpdfpath, watermark, 'watermarking_pdf')
+	  moveFile(fullpdfpath, finaldir, 'moving_file_to_finaldir')
 	end
 rescue => logstring
 ensure
@@ -218,16 +221,16 @@ archivedir = File.join(royaltiesdir, "archive", stage)
 logfile = nameLogFile(royaltiesdir)
 
 # remove old files from temp dir
-clearDir(spfdir, archivedir)
+clearDir(spfdir, archivedir, 'archiving_previous_tempfiles')
 
 # remove old files from final dir
-clearDir(finaldir, archivedir)
+clearDir(finaldir, archivedir, 'archiving_previous_finalfiles')
 
-splitSPF(input_file, spfdir)
+splitSPF(input_file, spfdir, 'splitting_master_spf_file')
 
-spfarr = getSPFArray(spfdir)
+spfarr = getSPFArray(spfdir, 'number_of_individual_statements')
 
-convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile)
+convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile, 'convert_statements_to_pdf')
 
 # ---------------------- LOGGING
 
