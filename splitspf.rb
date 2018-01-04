@@ -58,38 +58,34 @@ end
 
 def splitSPF(file, outputdir, logkey='')
 	logstring = file
-	s = File.binread(file)
-	bits = s.unpack("B*")[0]
-	counting = bits.scan(/01010000011000010110011101100101001000000011000100001101/)
-	puts counting.length()
+	filecontents = File.binread(file)
+	contentbits = filecontents.unpack("B*")[0]
+	counting = contentbits.scan(/01010000011000010110011101100101001000000011000100001101/)
+	# puts counting.length(), # debug
 	logtoJson(@log_hash, 'breaks_detected', counting.length())
+
 	counting.each.with_index(1) do |c, i|
-		puts c, i
-		content = File.binread(file)
-		contentbits = content.unpack("B*")[0]
-		# select everything up to the i+1th Page 1, for all but the last statement
+		puts c, i # debug
 		unless i == counting.size
-			puts "check 1"
-			j = i+1
-			sloppystripend = /(00011011001001100110110000110001010011110000110100001010000011000000110100001010)((.*?01010000011000010110011101100101001000000011000100001101){#{j}})/.match(contentbits).to_s
-			stripend = /(00011011001001100110110000110001010011110000110100001010000011000000110100001010)(.+000011000000110100001010)/.match(sloppystripend).to_s
-			subsection = /(000011000000110100001010)((.*?01010000011000010110011101100101001000000011000100001101){#{i}})/.match(stripend).to_s
+			# grab first record - first bit group represents beginning of file ("\e&l1O\r\n\f\r\n"), second is end of page 1 of second record "Page 1\r"
+			sloppy_firstrecord_bits = /(00011011001001100110110000110001010011110000110100001010000011000000110100001010)(..*?01010000011000010110011101100101001000000011000100001101){2}/.match(contentbits).to_s
+			# from the last match, capture from beginning of 1st record to beginning of second record (bits equivalent to "\r\n\f\r\n")
+			firstrecord_bits = /(0000110100001010000011000000110100001010)(.+0000110100001010000011000000110100001010)/.match(sloppy_firstrecord_bits)[2].to_s
+			# update content (rm firstrecord_bits from the file)
+			contentbits = contentbits.sub(/#{firstrecord_bits}/,"")
 		else
-		# the last statement has no following content, so adjusting accordingly
-			puts "check 2"
-			stripend = contentbits
-			subsection = /(000011000000110100001010)((.*?01010000011000010110011101100101001000000011000100001101){#{i}})/.match(contentbits).to_s
-			puts "check 4"
+			# last record, just grab from beginning of record to end of file
+			firstrecord_bits = /(0000110100001010000011000000110100001010)(.*)/.match(contentbits)[2].to_s
 		end
-		puts "check 3"
-		# selects everything up to the ith Page 1
-		subcounting = subsection.scan(/0010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000101000001100001011001110110010100100000/)
-		puts subcounting.length
-		m = subcounting.length-1
+		# insert header bits and convert back to bin as we write
+		firstrecord = [firstrecord_bits.gsub(/\A/,"00011011001001100110110000110001010011110000110100001010")].pack("B*")
+
+		# write to temp file
 		tempfile = File.join(outputdir, "temp#{i}.spf")
 		File.open(tempfile, 'wb') do |output|
-			output.write [stripend.gsub(/(00011011001001100110110000110001010011110000110100001010000011000000110100001010)((.+?000011000000110100001010){#{m}})/, "00011011001001100110110000110001010011110000110100001010")].pack("B*")
+			output.write firstrecord
 		end
+
 		# rename the files based on the statement data
 		rename = File.binread(tempfile)
 
@@ -122,6 +118,7 @@ def splitSPF(file, outputdir, logkey='')
 		end
 
 		finalfilename = File.join(outputdir, "#{author}_#{payee}_#{isbn}_#{sdate}.spf")
+		# finalfilename = File.join(outputdir, "#{author}_#{payee}_#{isbn}_#{sdate}_#{i}.spf") # debug
 		FileUtils.mv(tempfile, finalfilename)
 	end
 rescue => logstring
@@ -141,6 +138,7 @@ end
 def runSwiftConvert(command, inputfile, outputfile, logkey='')
 	logstring = inputfile
 	`"#{command}" -c"ldoc ""#{inputfile}"" | save PDF all #{outputfile} onefile"`
+	# old cmd: (not necessary with updated spfviewer+convert)
 	#`"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command FILE alias ""pdfFactory on GV3"" | set filename #{outputfile} | plot 1 all"`
 rescue => logstring
 ensure
@@ -221,7 +219,6 @@ archivedir = File.join(royaltiesdir, "archive", stage)
 # puts "watermark: ", watermark
 # puts "finaldir: ", finaldir
 # puts "archivedir: ", archivedir
-
 
 
 # ---------------------- PROCESSES
