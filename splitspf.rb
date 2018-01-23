@@ -2,6 +2,11 @@ require 'fileutils'
 require 'date'
 require 'json'
 
+# ENHANCEMENTS: once we are given an I/O method for this we may want to add an Outfolder with the inputfilename,
+# with maybe a txtfile that shows how many statements were found, and how many pdfs output.
+# May also want to add a cleanup for outfolders, archive folder, etc
+# also, looks like we may no longer need pdffactory since we are generating pdfs direct from spfviewer-Convert
+
 # ---------------------- LOGGING SETUP
 
 def logtoJson(log_hash, logkey, logstring)
@@ -37,7 +42,14 @@ end
 
 # ---------------------- METHODS
 
-def clearDir(dir, archivedir, logkey='')
+def clearDir(dir, logkey='')
+	FileUtils.rm Dir["#{dir}/*"].select {|f| test ?f, f}
+rescue => logstring
+ensure
+  logtoJson(@log_hash, logkey, logstring)
+end
+
+def archiveDir(dir, archivedir, logkey='')
 	FileUtils.cp Dir["#{dir}/*"].select {|f| test ?f, f}, archivedir
 rescue => logstring
 ensure
@@ -46,31 +58,34 @@ end
 
 def splitSPF(file, outputdir, logkey='')
 	logstring = file
-	s = File.binread(file)
-	bits = s.unpack("B*")[0]
-	counting = bits.scan(/010100000110000101100111011001010010000000110001/)
+	filecontents = File.binread(file)
+	contentbits = filecontents.unpack("B*")[0]
+	counting = contentbits.scan(/01010000011000010110011101100101001000000011000100001101/)
+	# puts counting.length(), # debug
+	logtoJson(@log_hash, 'breaks_detected', counting.length())
+
 	counting.each.with_index(1) do |c, i|
-		content = File.binread(file)
-		contentbits = content.unpack("B*")[0]
-		# select everything up to the i+1th Page 1, for all but the last statement
+		puts c, i # debug
 		unless i == counting.size
-			j = i+1
-			sloppystripend = /(00011011001001100110110000110001010011110000110100001010000011000000110100001010)((.*?010100000110000101100111011001010010000000110001){#{j}})/.match(contentbits).to_s
-			stripend = /(00011011001001100110110000110001010011110000110100001010000011000000110100001010)(.+000011000000110100001010)/.match(sloppystripend).to_s
-			subsection = /(000011000000110100001010)((.*?010100000110000101100111011001010010000000110001){#{i}})/.match(stripend).to_s
+			# grab first record - first bit group represents beginning of file ("\e&l1O\r\n\f\r\n"), second is end of page 1 of second record "Page 1\r"
+			sloppy_firstrecord_bits = /(00011011001001100110110000110001010011110000110100001010000011000000110100001010)(..*?01010000011000010110011101100101001000000011000100001101){2}/.match(contentbits).to_s
+			# from the last match, capture from beginning of 1st record to beginning of second record (bits equivalent to "\r\n\f\r\n")
+			firstrecord_bits = /(0000110100001010000011000000110100001010)(.+0000110100001010000011000000110100001010)/.match(sloppy_firstrecord_bits)[2].to_s
+			# update content (rm firstrecord_bits from the file)
+			contentbits = contentbits.sub(/#{firstrecord_bits}/,"")
 		else
-		# the last statement has no following content, so adjusting accordingly
-			stripend = contentbits
-			subsection = /(000011000000110100001010)((.*?010100000110000101100111011001010010000000110001){#{i}})/.match(contentbits).to_s
+			# last record, just grab from beginning of record to end of file
+			firstrecord_bits = /(0000110100001010000011000000110100001010)(.*)/.match(contentbits)[2].to_s
 		end
-		# selects everything up to the ith Page 1
-		subcounting = subsection.scan(/0010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000101000001100001011001110110010100100000/)
-		# puts subcounting.length
-		m = subcounting.length-1
+		# insert header bits and convert back to bin as we write
+		firstrecord = [firstrecord_bits.gsub(/\A/,"00011011001001100110110000110001010011110000110100001010")].pack("B*")
+
+		# write to temp file
 		tempfile = File.join(outputdir, "temp#{i}.spf")
-		File.open(tempfile, 'wb') do |output| 
-			output.write [stripend.gsub(/(00011011001001100110110000110001010011110000110100001010000011000000110100001010)((.+?000011000000110100001010){#{m}})/, "00011011001001100110110000110001010011110000110100001010")].pack("B*")
+		File.open(tempfile, 'wb') do |output|
+			output.write firstrecord
 		end
+
 		# rename the files based on the statement data
 		rename = File.binread(tempfile)
 
@@ -103,6 +118,7 @@ def splitSPF(file, outputdir, logkey='')
 		end
 
 		finalfilename = File.join(outputdir, "#{author}_#{payee}_#{isbn}_#{sdate}.spf")
+		# finalfilename = File.join(outputdir, "#{author}_#{payee}_#{isbn}_#{sdate}_#{i}.spf") # debug
 		FileUtils.mv(tempfile, finalfilename)
 	end
 rescue => logstring
@@ -121,16 +137,17 @@ end
 
 def runSwiftConvert(command, inputfile, outputfile, logkey='')
 	logstring = inputfile
-	`"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command F
-	ILE alias ""pdfFactory Pro"" | set filename #{outputfile} | plot 1 all"`
+	`"#{command}" -c"ldoc ""#{inputfile}"" | save PDF all #{outputfile} onefile"`
+	# old cmd: (not necessary with updated spfviewer+convert)
+	#`"#{command}" -c"ldoc ""#{inputfile}"" | printer number 1 type MS_WIN command FILE alias ""pdfFactory on GV3"" | set filename #{outputfile} | plot 1 all"`
 rescue => logstring
 ensure
   logtoJson(@log_hash, logkey, logstring)
 end
 
-def applyWatermark(file, watermark, logkey='')
-	logstring = file
-	`pdftk #{file} multistamp #{watermark} output #{file} verbose`
+def applyWatermark(input_file, out_file, watermark, logkey='')
+	logstring = input_file
+	`pdftk #{input_file} multistamp #{watermark} output #{out_file} verbose`
 rescue => logstring
 ensure
   logtoJson(@log_hash, logkey, logstring)
@@ -143,14 +160,20 @@ ensure
   logtoJson(@log_hash, logkey, logstring)
 end
 
-def convertSPF(arr, cmd, pdfdir, watermark, finaldir, logfile, logkey='')
+def convertSPF(arr, cmd, spfdir, pdfdir, watermark, finaldir, logfile, logkey='')
 	arr.each do |c|
-		outputfilename = c.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first
-		outputfilename = "#{outputfilename}.pdf"
-		swiftconvert = runSwiftConvert(cmd, c, outputfilename, 'converting_file_to_spf')
-		fullpdfpath = File.join(pdfdir, outputfilename, 'converting_file_to_pdf')
-		watermarks = applyWatermark(fullpdfpath, watermark, 'watermarking_pdf')
-	  moveFile(fullpdfpath, finaldir, 'moving_file_to_finaldir')
+		file_basename = c.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)).pop.rpartition('.').first
+		puts "converting & watermarking: #{file_basename}"
+
+		# convert to PDF!
+		file_basepath = c.rpartition('.').first
+		converted_pdf_file = "#{file_basepath}_noWM.pdf"
+		swiftconvert = runSwiftConvert(cmd, c, converted_pdf_file, 'converting_file_to_pdf')
+		# watermark the PDF!
+		watermarked_pdf = "#{file_basepath}.pdf"
+		watermarks = applyWatermark(converted_pdf_file, watermarked_pdf, watermark, 'watermarking_pdf')
+		# move watermarked PDF to done!
+		moveFile(watermarked_pdf, finaldir, 'moving_file_to_finaldir')
 	end
 rescue => logstring
 ensure
@@ -161,15 +184,17 @@ end
 
 input_file = ARGV[0]
 
-stage = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-2].pop
+# stage = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-2].pop
+stage = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-1].pop
 
-royaltiesdir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-3].join(File::SEPARATOR)
+# royaltiesdir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-3].join(File::SEPARATOR)
+royaltiesdir = File.expand_path(File.dirname(__FILE__))
 
 spfdir = File.join(royaltiesdir, "temp", stage)
 
 swiftconvcmd = File.join("C:", "Program Files (x86)", "SwiftView", "sview.exe")
 
-pdfdir = File.join("C:", "Users", "padwoadmin", "Documents", "PDF files", "Autosave")
+pdfdir = File.join("C:", "Users", "royalty", "Documents", "PDF files", "Autosave")
 
 assetsdir = File.join(royaltiesdir, "assets")
 
@@ -179,11 +204,22 @@ else
 	watermark = File.join(assetsdir, "images", "watermark-draft.pdf")
 end
 
-finaldir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-2].join(File::SEPARATOR)
+finaldir = input_file.split(Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact))[0...-3].join(File::SEPARATOR)
 
-finaldir = File.join(finaldir, "done")
+finaldir = File.join(finaldir, "done", stage)
 
 archivedir = File.join(royaltiesdir, "archive", stage)
+
+# # Debug
+# puts "input_file :", input_file
+# puts "stage: ", stage
+# puts "royaltiesdir: ", royaltiesdir
+# puts "spfdir: ", spfdir
+# puts "assetsdir: ", assetsdir
+# puts "watermark: ", watermark
+# puts "finaldir: ", finaldir
+# puts "archivedir: ", archivedir
+
 
 # ---------------------- PROCESSES
 
@@ -192,16 +228,17 @@ logfile = nameLogFile(royaltiesdir)
 @log_hash = {}
 
 # remove old files from temp dir
-clearDir(spfdir, archivedir, 'archiving_previous_tempfiles')
+archiveDir(spfdir, archivedir, 'archiving_previous_tempfiles')  #debug
+clearDir(spfdir, 'rm-ing_previous_tempfiles')
 
 # remove old files from final dir
-clearDir(finaldir, archivedir, 'archiving_previous_finalfiles')
+archiveDir(finaldir, archivedir, 'archiving_previous_finalfiles')
 
 splitSPF(input_file, spfdir, 'splitting_master_spf_file')
 
 spfarr = getSPFArray(spfdir, 'number_of_individual_statements')
 
-convertSPF(spfarr, swiftconvcmd, pdfdir, watermark, finaldir, logfile, 'convert_statements_to_pdf')
+convertSPF(spfarr, swiftconvcmd, spfdir, pdfdir, watermark, finaldir, logfile, 'convert_statements_to_pdf')
 
 # ---------------------- LOGGING
 
